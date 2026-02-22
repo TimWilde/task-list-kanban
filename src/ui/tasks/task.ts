@@ -300,6 +300,10 @@ export class Task {
 		}
 
 		const tags = getTagsFromContent(content);
+		const tagEntries = Array.from(tags).map((tag) => ({
+			tag,
+			kebabTag: kebab<ColumnTag>(tag),
+		}));
 
 		this._id = sha256(content + fileHandle.path + rowIndex).toString();
 		this.content = content;
@@ -308,12 +312,36 @@ export class Task {
 		this._path = fileHandle.path;
 		this._indentation = indentation || "";
 
-		for (const tag of tags) {
-			const kebabTag = kebab<ColumnTag>(tag);
-			if (kebabTag in columnTagTable || tag === "done") {
-				if (!this._column) {
-					this._column = kebabTag;
-				}
+		const columnCandidates = tagEntries.filter(
+			({ tag, kebabTag }) => kebabTag in columnTagTable || tag === "done"
+		);
+		this._column = columnCandidates[0]?.kebabTag;
+
+		const isCancelledState = isCancelledStatus(
+			this._displayStatus,
+			this.cancelledStatusMarkers
+		);
+		const firstNonCancelledCandidate = columnCandidates.find(
+			({ kebabTag }) => kebabTag !== "cancelled"
+		);
+		const hasCancelledCandidate = columnCandidates.some(
+			({ kebabTag }) => kebabTag === "cancelled"
+		);
+		const shouldPreserveCancelledTagToken =
+			isCancelledState &&
+			hasCancelledCandidate &&
+			firstNonCancelledCandidate !== undefined;
+
+		if (shouldPreserveCancelledTagToken) {
+			this._column = firstNonCancelledCandidate?.kebabTag;
+		}
+
+		for (const { tag, kebabTag } of tagEntries) {
+			const isColumnCandidate = kebabTag in columnTagTable || tag === "done";
+			const preserveAsTag =
+				shouldPreserveCancelledTagToken && kebabTag === "cancelled";
+
+			if (isColumnCandidate && !preserveAsTag) {
 				tags.delete(tag);
 				if (!consolidateTags) {
 					this.content = this.content
@@ -381,15 +409,79 @@ export class Task {
 	get column(): ColumnTag | "archived" | undefined {
 		return this._column;
 	}
+
+	private hasCancelledTagToken(): boolean {
+		for (const tag of this._tags) {
+			if (tag.toLowerCase() === "cancelled") {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private addCancelledTagToken(tagValue: string) {
+		this._tags.add(tagValue);
+		if (!this.consolidateTags) {
+			this.content = this.content + (this.content.length > 0 ? ` #${tagValue}` : `#${tagValue}`);
+		}
+	}
+
+	private removeCancelledTagTokens() {
+		const tagsToRemove: string[] = [];
+		for (const tag of this._tags) {
+			if (tag.toLowerCase() === "cancelled") {
+				tagsToRemove.push(tag);
+			}
+		}
+		for (const tag of tagsToRemove) {
+			this._tags.delete(tag);
+		}
+
+		this.content = this.content
+			.replace(/(^|\s)#[cC][aA][nN][cC][eE][lL][lL][eE][dD](?=\s|$)/g, "")
+			.replace(/  +/g, " ")
+			.trim();
+	}
+
+	private getCancelledTagVariantFromColumn(column: ColumnTag | "archived" | undefined): string | undefined {
+		if (!column || column === "archived") {
+			return undefined;
+		}
+
+		const mapped = this.columnTagTable[column];
+		if (mapped && mapped.toLowerCase() === "cancelled" && isValidTag(mapped)) {
+			return mapped;
+		}
+
+		if (column.toLowerCase() === "cancelled") {
+			return column;
+		}
+
+		return undefined;
+	}
+
+	private ensureCancelledTagToken(preferredTagValue?: string) {
+		if (!this.hasCancelledTagToken()) {
+			this.addCancelledTagToken(preferredTagValue ?? "cancelled");
+		}
+	}
+
 	moveToColumn(column: ColumnTag) {
+		const previousColumn = this._column;
 		this._column = column;
 
 		if (column === "cancelled") {
 			this._done = false;
 			this.cancel();
-		} else if (this._done) {
-			this._done = false;
-			this._displayStatus = " ";
+		} else {
+			if (!this._done && this.isCancelled) {
+				this.ensureCancelledTagToken(this.getCancelledTagVariantFromColumn(previousColumn));
+			}
+
+			if (this._done) {
+				this._done = false;
+				this._displayStatus = " ";
+			}
 		}
 	}
 
@@ -438,45 +530,19 @@ export class Task {
 	}
 
 	cancel() {
+		this._done = false;
+		this._column = kebab<ColumnTag>("cancelled");
 		this._displayStatus = Array.from(this.cancelledStatusMarkers)[0] ?? "-";
-
-		let hasCancelled = this._column === "cancelled";
-		for (const tag of this._tags) {
-			if (tag.toLowerCase() === "cancelled") {
-				hasCancelled = true;
-				break;
-			}
-		}
-
-		if (!hasCancelled) {
-			this._tags.add("cancelled");
-			if (!this.consolidateTags) {
-				this.content = this.content + (this.content.length > 0 ? " #cancelled" : "#cancelled");
-			}
-		}
+		this.removeCancelledTagTokens();
 	}
 
 	restore() {
 		this._displayStatus = " ";
-
-		const tagsToRemove: string[] = [];
-		for (const tag of this._tags) {
-			if (tag.toLowerCase() === "cancelled") {
-				tagsToRemove.push(tag);
-			}
-		}
-		for (const tag of tagsToRemove) {
-			this._tags.delete(tag);
-		}
+		this.removeCancelledTagTokens();
 
 		if (this._column === "cancelled") {
 			this._column = undefined;
 		}
-
-		this.content = this.content
-			.replace(/(^|\s)#[cC][aA][nN][cC][eE][lL][lL][eE][dD](?=\s|$)/g, "")
-			.replace(/  +/g, " ")
-			.trim();
 	}
 
 	delete() {

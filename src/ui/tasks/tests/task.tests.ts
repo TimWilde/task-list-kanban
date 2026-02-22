@@ -994,7 +994,7 @@ describe("Task cancelling", () => {
 
 		expect(task).toBeTruthy();
 		expect(task?.isCancelled).toBe(true);
-		expect(task?.serialise()).toBe("- [-] Incomplete task #cancelled #column");
+		expect(task?.serialise()).toBe("- [-] Incomplete task #cancelled");
 	});
 
 	it("restoring a task updates the status to ' '", () => {
@@ -1031,7 +1031,7 @@ describe("Task cancelling", () => {
 
 		expect(task).toBeTruthy();
 		expect(task?.isCancelled).toBe(true);
-		expect(task?.serialise()).toBe("- [C] Incomplete task #cancelled #column");
+		expect(task?.serialise()).toBe("- [C] Incomplete task #cancelled");
 	});
 
 	it("matches isCancelled against the second custom marker", () => {
@@ -1087,17 +1087,59 @@ describe("Task cancelling", () => {
 			expect(localTask?.serialise()).toBe("- [ ] Some task #uncategorised");
 		});
 
-		it("move semantics Done -> cancelled-mapped sets cancelled marker and tag", () => {
-			const taskString = "- [x] Some task #column";
-			let localTask: Task | undefined;
-			if (isTrackedTaskString(taskString)) {
-				localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
-				localTask.moveToColumn(kebab<ColumnTag>("cancelled"));
-			}
-			expect(localTask?.serialise()).toBe("- [-] Some task #cancelled");
+			it("move semantics Done -> cancelled-mapped sets cancelled marker and tag", () => {
+				const taskString = "- [x] Some task #column";
+				let localTask: Task | undefined;
+				if (isTrackedTaskString(taskString)) {
+					localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
+					localTask.moveToColumn(kebab<ColumnTag>("cancelled"));
+				}
+				expect(localTask?.serialise()).toBe("- [-] Some task #cancelled");
+			});
+
+			it("move semantics keeps cancelled token when leaving cancelled-mapped column", () => {
+				const localColumns: ColumnTagTable = {
+					[kebab<ColumnTag>("Cancelled")]: "Cancelled",
+					[kebab<ColumnTag>("Blocked")]: "Blocked",
+				};
+				const taskString = "- [-] Some task #Cancelled";
+				let localTask: Task | undefined;
+				if (isTrackedTaskString(taskString)) {
+					localTask = new Task(taskString, { path: "/" }, 0, localColumns, false, "xX", "-", "");
+					localTask.moveToColumn(kebab<ColumnTag>("Blocked"));
+				}
+				expect(localTask?.serialise()).toBe("- [-] Some task #Cancelled #Blocked");
+			});
+
+			it("cancelled state with cancelled+non-cancelled column tags resolves to non-cancelled column and keeps cancelled token", () => {
+				const localColumns: ColumnTagTable = {
+					[kebab<ColumnTag>("Cancelled")]: "Cancelled",
+					[kebab<ColumnTag>("Blocked")]: "Blocked",
+				};
+				const taskString = "- [-] Some task #Cancelled #Blocked";
+				let localTask: Task | undefined;
+				if (isTrackedTaskString(taskString)) {
+					localTask = new Task(taskString, { path: "/" }, 0, localColumns, false, "xX", "-", "");
+				}
+				expect(localTask?.column).toBe("blocked");
+				expect(localTask?.serialise()).toBe("- [-] Some task #Cancelled #Blocked");
+			});
+
+			it("moving cancelled task into cancelled-mapped column does not duplicate cancelled tag", () => {
+				const localColumns: ColumnTagTable = {
+					[kebab<ColumnTag>("Cancelled")]: "Cancelled",
+					[kebab<ColumnTag>("Blocked")]: "Blocked",
+				};
+				const taskString = "- [-] Some task #Cancelled #Blocked";
+				let localTask: Task | undefined;
+				if (isTrackedTaskString(taskString)) {
+					localTask = new Task(taskString, { path: "/" }, 0, localColumns, false, "xX", "-", "");
+					localTask.moveToColumn(kebab<ColumnTag>("Cancelled"));
+				}
+				expect(localTask?.serialise()).toBe("- [-] Some task #Cancelled");
+			});
 		});
 	});
-});
 
 describe("Columns with spaces and special characters", () => {
 	const columnTags: ColumnTagTable = {
