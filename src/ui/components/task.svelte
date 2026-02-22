@@ -358,6 +358,30 @@
 						opacity={isSelected ? 1 : 0.5}
 					/>
 				</button>
+			{:else}
+				<!-- Mark done button (circle) -->
+				<button
+					class="icon-button mark-done"
+					class:is-done={task.done}
+					aria-label={task.done ? "Mark as incomplete" : "Move to Done"}
+					aria-pressed={task.done}
+					title={task.done ? "Mark as incomplete" : "Move to Done"}
+					on:click={() => taskActions.toggleDone(task.id)}
+					on:keydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							taskActions.toggleDone(task.id);
+						}
+					}}
+					tabindex="0"
+				>
+					<span class="default-icon">
+						<Icon name={task.isCancelled ? "lucide-circle-off" : task.done ? "lucide-circle-check" : "lucide-circle"} size={18} opacity={0.5} />
+					</span>
+					<span class="hover-icon">
+						<Icon name="lucide-circle-check" size={18} opacity={1} />
+					</span>
+				</button>
 			{/if}
 		</div>
 		<div class="task-row-content">

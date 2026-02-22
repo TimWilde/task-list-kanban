@@ -326,7 +326,7 @@ export class Task {
 			}
 		}
 
-		this.tags = tags;
+		this._tags = tags;
 		this.blockLink = blockLink;
 
 		if (this._done) {
@@ -381,14 +381,24 @@ export class Task {
 	get column(): ColumnTag | "archived" | undefined {
 		return this._column;
 	}
-	set column(column: ColumnTag) {
+	moveToColumn(column: ColumnTag) {
 		this._column = column;
-		this._done = false;
-		this._displayStatus = " ";
+
+		if (column === "cancelled") {
+			this._done = false;
+			this.cancel();
+		} else if (this._done) {
+			this._done = false;
+			this._displayStatus = " ";
+		}
 	}
 
 	readonly blockLink: string | undefined;
-	readonly tags: ReadonlySet<string>;
+
+	private _tags: Set<string>;
+	get tags(): ReadonlySet<string> {
+		return this._tags;
+	}
 
 	serialise(): string {
 		if (this._deleted) {
@@ -429,10 +439,44 @@ export class Task {
 
 	cancel() {
 		this._displayStatus = Array.from(this.cancelledStatusMarkers)[0] ?? "-";
+
+		let hasCancelled = this._column === "cancelled";
+		for (const tag of this._tags) {
+			if (tag.toLowerCase() === "cancelled") {
+				hasCancelled = true;
+				break;
+			}
+		}
+
+		if (!hasCancelled) {
+			this._tags.add("cancelled");
+			if (!this.consolidateTags) {
+				this.content = this.content + (this.content.length > 0 ? " #cancelled" : "#cancelled");
+			}
+		}
 	}
 
 	restore() {
 		this._displayStatus = " ";
+
+		const tagsToRemove: string[] = [];
+		for (const tag of this._tags) {
+			if (tag.toLowerCase() === "cancelled") {
+				tagsToRemove.push(tag);
+			}
+		}
+		for (const tag of tagsToRemove) {
+			this._tags.delete(tag);
+		}
+
+		if (this._column === "cancelled") {
+			this._column = undefined;
+		}
+
+		this.content = this.content
+			.replace(/(^|\s)#[cC][aA][nN][cC][eE][lL][lL][eE][dD](?=\s|$)/g, "")
+			.replace(/  +/g, " ")
+			.trim();
 	}
 
 	delete() {

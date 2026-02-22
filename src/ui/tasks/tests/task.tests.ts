@@ -107,7 +107,7 @@ describe("Task", () => {
 		const taskString = "- [ ] Something #tag ^link-link";
 		if (isTrackedTaskString(taskString)) {
 			task = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
-			task.column = "column" as ColumnTag;
+			task.moveToColumn("column" as ColumnTag);
 		}
 
 		const output = task?.serialise();
@@ -994,7 +994,7 @@ describe("Task cancelling", () => {
 
 		expect(task).toBeTruthy();
 		expect(task?.isCancelled).toBe(true);
-		expect(task?.serialise()).toBe("- [-] Incomplete task #column");
+		expect(task?.serialise()).toBe("- [-] Incomplete task #cancelled #column");
 	});
 
 	it("restoring a task updates the status to ' '", () => {
@@ -1031,7 +1031,7 @@ describe("Task cancelling", () => {
 
 		expect(task).toBeTruthy();
 		expect(task?.isCancelled).toBe(true);
-		expect(task?.serialise()).toBe("- [C] Incomplete task #column");
+		expect(task?.serialise()).toBe("- [C] Incomplete task #cancelled #column");
 	});
 
 	it("matches isCancelled against the second custom marker", () => {
@@ -1043,6 +1043,59 @@ describe("Task cancelling", () => {
 
 		expect(task).toBeTruthy();
 		expect(task?.isCancelled).toBe(true);
+	});
+
+	describe("Phase 4 validations", () => {
+		it("restoring removes all standalone cancelled tokens with whitespace cleanup", () => {
+			const taskString = "- [-] Buy  #cancelled  groceries #Cancelled  #notcancelled";
+			let localTask: Task | undefined;
+			if (isTrackedTaskString(taskString)) {
+				localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
+				localTask.restore();
+			}
+			expect(localTask?.isCancelled).toBe(false);
+			expect(localTask?.serialise()).toBe("- [ ] Buy groceries #notcancelled");
+		});
+
+		it("restoring empty content works", () => {
+			const taskString = "- [-] #cancelled";
+			let localTask: Task | undefined;
+			if (isTrackedTaskString(taskString)) {
+				localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
+				localTask.restore();
+			}
+			expect(localTask?.serialise()).toBe("- [ ]");
+		});
+
+		it("move semantics preserve state on non-Done -> non-Done", () => {
+			const taskString = "- [-] Some task #cancelled";
+			let localTask: Task | undefined;
+			if (isTrackedTaskString(taskString)) {
+				localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
+				localTask.moveToColumn(kebab<ColumnTag>("column"));
+			}
+			expect(localTask?.serialise()).toBe("- [-] Some task #cancelled #column");
+		});
+
+		it("move semantics Done -> non-Done clears marker", () => {
+			const taskString = "- [x] Some task #column";
+			let localTask: Task | undefined;
+			if (isTrackedTaskString(taskString)) {
+				localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
+				localTask.moveToColumn(kebab<ColumnTag>("uncategorised"));
+			}
+			expect(localTask?.serialise()).toBe("- [ ] Some task #uncategorised");
+		});
+
+		it("move semantics Done -> cancelled-mapped sets cancelled marker and tag", () => {
+			const taskString = "- [x] Some task #column";
+			let localTask: Task | undefined;
+			if (isTrackedTaskString(taskString)) {
+				localTask = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
+				localTask.moveToColumn(kebab<ColumnTag>("cancelled"));
+			}
+			expect(localTask?.serialise()).toBe("- [-] Some task #cancelled");
+		});
 	});
 });
 
@@ -1129,7 +1182,7 @@ describe("Columns with spaces and special characters", () => {
 		const taskString = "- [ ] Something";
 		if (isTrackedTaskString(taskString)) {
 			task = new Task(taskString, { path: "/" }, 0, columnTags, false, "xX", "-", "");
-			task.column = kebab<ColumnTag>("In Progress"); // "in-progress"
+			task.moveToColumn(kebab<ColumnTag>("In Progress")); // "in-progress"
 		}
 
 		const output = task?.serialise();

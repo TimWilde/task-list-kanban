@@ -1,6 +1,6 @@
 # Cancel Task Enhancements
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Feature Request Summary
 
@@ -189,53 +189,53 @@ Specifically, we need to change the glyph used for cancelled tasks, automaticall
 ## Manual Test Cases
 
 ### TC-01: UI Glyph Change
-- [ ] Cancel an incomplete task using the task menu.
-- [ ] Verify the task's checkbox icon changes to `lucide-circle-off`.
-- [ ] Restore the task and verify the icon returns to `lucide-circle`.
-- [ ] Verify when a task is both done and cancelled-marker-matching, icon is `lucide-circle-off` (cancelled precedence).
-- [ ] Toggle to selection mode and verify square selection icons render as before.
+- [x] Cancel an incomplete task using the task menu.
+- [x] Verify the task's checkbox icon changes to `lucide-circle-off`.
+- [x] Restore the task and verify the icon returns to `lucide-circle`.
+- [x] Verify when a task is both done and cancelled-marker-matching, icon is `lucide-circle-off` (cancelled precedence).
+- [x] Toggle to selection mode and verify square selection icons render as before.
 
 ### TC-02: Tag Addition and Idempotency
-- [ ] Cancel a standard task -> verify `#cancelled` is appended.
-- [ ] Manually edit a task's raw text to include `#Cancelled`, then use "Cancel task" -> verify no duplicate cancelled tag token is added.
+- [x] Cancel a standard task -> verify `#cancelled` is appended.
+- [x] Manually edit a task's raw text to include `#Cancelled`, then use "Cancel task" -> verify no duplicate cancelled tag token is added.
 
 ### TC-03: Tag Removal and Clean Formatting
-- [ ] Restore a task that was cancelled via UI -> verify `#cancelled` is completely removed and no trailing space remains at the end of the text.
-- [ ] Restore `- [-] Buy #notcancelled #cancelled2 #cancelled stuff` -> verify only standalone `#cancelled` is removed.
-- [ ] Restore `- [-] #cancelled` -> verify result is `- [ ]`.
+- [x] Restore a task that was cancelled via UI -> verify `#cancelled` is completely removed and no trailing space remains at the end of the text.
+- [x] Restore `- [-] Buy #notcancelled #cancelled2 #cancelled stuff` -> verify only standalone `#cancelled` is removed.
+- [x] Restore `- [-] #cancelled` -> verify result is `- [ ]`.
 
 ### TC-04: Bulk Action Safety
-- [ ] Select multiple non-cancelled tasks and run "Cancel N selected" -> verify all modified tasks receive the `#cancelled` tag and their glyphs update.
-- [ ] Select multiple cancelled tasks and run "Restore N selected" -> verify tags are stripped from all selected tasks and glyphs revert to `lucide-circle`.
+- [x] Select multiple non-cancelled tasks and run "Cancel N selected" -> verify all modified tasks receive the `#cancelled` tag and their glyphs update.
+- [x] Select multiple cancelled tasks and run "Restore N selected" -> verify tags are stripped from all selected tasks and glyphs revert to `lucide-circle`.
 
 ### TC-05: Non-Interference Guardrails
-- [ ] Confirm everything functions correctly when a custom cancelled marker (e.g., `c`) is defined in the plugin Settings.
-- [ ] Confirm Done column behavior remains governed by existing done/ignored marker logic and is not changed by normal-tag handling for `#cancelled`.
+- [x] Confirm everything functions correctly when a custom cancelled marker (e.g., `c`) is defined in the plugin Settings.
+- [x] Confirm Done column behavior remains governed by existing done/ignored marker logic and is not changed by normal-tag handling for `#cancelled`.
 
 ### TC-06: Multiple Tags and Column Resolution
-- [ ] Restore `- [-] Something #Cancelled #blocked` where `#blocked` maps to a column -> verify output no longer contains cancelled token and task resolves to blocked column.
-- [ ] Restore `- [-] Something #Cancelled` with no other matching column tag -> verify task becomes uncategorised.
-- [ ] Verify multiple candidate non-cancelled column tags still resolve using existing first-match source-order behavior.
+- [x] Restore `- [-] Something #Cancelled #blocked` where `#blocked` maps to a column -> verify output no longer contains cancelled token and task resolves to blocked column.
+- [x] Restore `- [-] Something #Cancelled` with no other matching column tag -> verify task becomes uncategorised.
+- [x] Verify multiple candidate non-cancelled column tags still resolve using existing first-match source-order behavior.
 
 ### TC-07: Normal Tag Behavior
-- [ ] Confirm `#cancelled` appears in existing tag filter options and can be used as a filter like any other tag.
-- [ ] If a user has a column mapped by `cancelled` tag naming, confirm cancelling a task allows existing tag-to-column behavior to operate without any new feature-specific codepath.
+- [x] Confirm `#cancelled` appears in existing tag filter options and can be used as a filter like any other tag.
+- [x] If a user has a column mapped by `cancelled` tag naming, confirm cancelling a task allows existing tag-to-column behavior to operate without any new feature-specific codepath.
 
 ### TC-08: Done Placement with Cancelled Tag Present
-- [ ] Start from a cancelled task containing `#cancelled` and mark it done (`[x]` or configured done marker path).
-- [ ] Verify task appears in the Done column according to existing done-state rules.
-- [ ] Verify `#cancelled` remains present in task text/tag handling (subject to existing tag display settings such as consolidate tags).
-- [ ] If a custom cancelled column mapping exists, verify Done placement still wins when task is done-state.
+- [x] Start from a cancelled task containing `#cancelled` and mark it done (`[x]` or configured done marker path).
+- [x] Verify task appears in the Done column according to existing done-state rules.
+- [x] Verify `#cancelled` remains present in task text/tag handling (subject to existing tag display settings such as consolidate tags).
+- [x] If a custom cancelled column mapping exists, verify Done placement still wins when task is done-state.
 
 ### TC-09: Restore from Cancelled-Mapped Column Removes Stale Tag
-- [ ] Configure a column that maps to `cancelled` tag naming.
-- [ ] Create/ensure a task `- [-] Something #Cancelled` appears in that column.
-- [ ] Run Restore task.
-- [ ] Verify source becomes `- [ ] Something` (all standalone cancelled tokens removed case-insensitively).
-- [ ] Verify task no longer remains in cancelled-mapped column due to leftover cancelled tag.
+- [x] Configure a column that maps to `cancelled` tag naming.
+- [x] Create/ensure a task `- [-] Something #Cancelled` appears in that column.
+- [x] Run Restore task.
+- [x] Verify source becomes `- [ ] Something` (all standalone cancelled tokens removed case-insensitively).
+- [x] Verify task no longer remains in cancelled-mapped column due to leftover cancelled tag.
 
 ### TC-10: Move Semantics Preserve or Transition State Correctly
-- [ ] Move a cancelled task (`- [-] Something #cancelled`) from one non-Done column to another -> verify marker and cancelled tag are preserved.
-- [ ] Move a done task from Done to a non-cancelled column -> verify done marker clears to `[ ]`.
-- [ ] Move a done task from Done to a cancelled-mapped column -> verify marker becomes first cancelled marker and cancelled tag token is present (preserving existing case variant if already present).
-- [ ] Verify TC-10 behavior is identical for drag-drop and Move-to menu paths (single and bulk).
+- [x] Move a cancelled task (`- [-] Something #cancelled`) from one non-Done column to another -> verify marker and cancelled tag are preserved.
+- [x] Move a done task from Done to a non-cancelled column -> verify done marker clears to `[ ]`.
+- [x] Move a done task from Done to a cancelled-mapped column -> verify marker becomes first cancelled marker and cancelled tag token is present (preserving existing case variant if already present).
+- [x] Verify TC-10 behavior is identical for drag-drop and Move-to menu paths (single and bulk).

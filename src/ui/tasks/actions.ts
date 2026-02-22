@@ -57,7 +57,7 @@ export function createTaskActions({
 
 	return {
 		async changeColumn(id, column) {
-			await updateRowWithTask(id, (task) => (task.column = column));
+			await updateRowWithTask(id, (task) => task.moveToColumn(column));
 		},
 
 		async markDone(id) {
